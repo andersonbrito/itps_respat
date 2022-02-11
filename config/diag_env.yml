@@ -1,0 +1,19 @@
+name: pyenv
+channels:
+- bioconda
+- conda-forge
+- defaults
+
+dependencies:
+- python=3*
+- snakemake
+- geopandas
+- openpyxl
+- xlrd
+- geopy
+- epiweeks
+- unidecode
+- matplotlib
+
+- pip:
+  - pycountry-convert

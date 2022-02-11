@@ -1,0 +1,15 @@
+param	value	note
+input	combined_matrix_states_posrate.tsv	# input file
+yvar	DS_UF_SIGLA	# main variable, shown on Y axis
+bins	12	# number of bins in heatmap
+xlabel		# X label
+ylabel		# Y label
+min_value	0	# minimum value
+max_value	0.6	# maximum value
+category_order	AC, AM, AP, PA, RO, TO, AL, BA, CE, MA, PB, PE, PI, RN, SE, DF, GO, MS, MT, ES, MG, RJ, SP, PR, RS, SC	# order of categories listed in 'categories'
+filter	pathogen:SC2, test_result:Positive	# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
+ignore_cols	pathogen, test_result, country, ADM1_PCODE, ADM1_PT, 2022-02-06, 2022-02-07, 2022-02-08	# columns to be ignored in the line plot
+colours	coolwarm	# colours to be assigned to each line
+show_legend	yes	# yes or no
+tick_every	3	# frequency of tick in X axis
+figsize	15, 3	# figure size: width and height, in inches

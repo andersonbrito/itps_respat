@@ -1,0 +1,18 @@
+param	value	note
+input	matrix_agegroups_posrate.tsv	# input file
+categories	age_group	# main variable, shown on Y axis
+min_y	-0.1	# minimum value for Y axis
+max_y	0.8	# maximum value for Y axis
+y_format	percentage	# Format of Y axis valus (percentage or ratio)
+rolling_average	3	# Should rolling average be calculated?
+window		# Rolling average window (average every X values)
+xlabel		# X label
+ylabel	Taxa de positividade de testes\n(por faixa etária)	# Y label
+category_order	0-9, 9-19, 19-29, 29-39, 39-49, 49-59, 59-69, 69-79, 80+	# order of categories listed in 'categories'
+tick_every	3	# frequency of tick in X axis
+filter	SC2_test_result:Positive	# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
+ignore_cols	SC2_test_result, country, 2022-02-06, 2022-02-07, 2022-02-08	# columns to be ignored in the line plot
+colours	inferno	# colours to be assigned to each line
+show_grid	y	# show grip for X or Y axis?
+show_legend	yes	# yes or no
+figsize	6, 3	# figure size: width and height, in inches

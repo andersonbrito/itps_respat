@@ -1,0 +1,16 @@
+param	value	note
+input	matrix_states_posneg_covid_weeks.tsv	# input file
+var1	SC2_test_result	# main variable (outer ring)
+var2		# secondary variable (inner ring)
+groupby	ADM1_PCODE	# column containing categories of data to be plotted as subplots
+size	0.35	# thickness of rings
+colour_scheme	nipy_spectral	# colour pallete, if colour file not provided
+filter		# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
+start_date	date_testing:2022-01-09	# start date
+end_date	date_testing:2022-01-15	# end date
+nrows	6	# number of rows of the multiplot
+ncols	5	# number of columns of the multiplot
+show_legend	no	# yes or no
+show_values	raw	# values to be shown alongside wedges (raw, percentages, all)
+fontsize	8	# value font size
+figsize	7, 7	# figure size: width and height, in inches
