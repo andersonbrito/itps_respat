@@ -12,9 +12,10 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument("--input1", required=True, help="Main matrix, used as the numerator")
-    parser.add_argument("--input2", required=True, type=str,  help="Secondary matrix, with values used as denominators")
+    parser.add_argument("--input2", required=False, type=str,  help="Secondary matrix, with values used as denominators")
     parser.add_argument("--index1", nargs="+", required=True, type=str, help="Columns with unique identifiers in the numerator file")
-    parser.add_argument("--index2", nargs="+", required=True, type=str, help="Columns with unique identifiers in the denominator file, at least one match index1")
+    parser.add_argument("--index2", nargs="+", required=False, type=str, help="Columns with unique identifiers in the denominator file, at least one match index1")
+    parser.add_argument("--rolling-average", required=False, type=int,  help="Window for rolling average conversion")
     parser.add_argument("--norm-var", required=False, type=str,  help="Single column to be used for normalization of all columns (e.g. population)")
     parser.add_argument("--rate", required=False, type=int,  help="Rate factor for normalization (e.g. 100000 habitants)")
     parser.add_argument("--min-denominator", required=False, type=int, default=0, help="Value X of rolling average window (mean at every X data points in time series)")
@@ -26,6 +27,7 @@ if __name__ == '__main__':
     input2 = args.input2
     unique_id1 = args.index1
     unique_id2 = args.index2
+    rolling_avg = args.rolling_average
     norm_variable = args.norm_var
     rate_factor = args.rate
     min_denominator = args.min_denominator
@@ -125,8 +127,14 @@ if __name__ == '__main__':
     if filters not in ['', None]:
         df = filter_df(df, filters)
 
-    df2 = load_table(input2)
-    df2.fillna('', inplace=True)
+    if input2 not in ['', None]:
+        df2 = load_table(input2)
+        df2.fillna('', inplace=True)
+    else:
+        df2 = df[unique_id1]
+        norm_variable = 'norm_variable'
+        unique_id2 = unique_id1
+        df2[norm_variable] = 1
 
     # print(df2.head)
     # print(df2.columns.tolist())
@@ -134,7 +142,7 @@ if __name__ == '__main__':
     # get columns
     date_columns = []
     for column in df.columns.to_list():
-        if column[-1].isdecimal():
+        if column[0].isdecimal():
             if norm_variable in ['', None]:
                 if column in df2.columns.tolist():
                     date_columns.append(column)
@@ -167,28 +175,14 @@ if __name__ == '__main__':
     # print(df2)
     # print(df3)
 
-    # if rolling_avg not in ['', None]:
-    #     df = df.transpose()
-    #     # print(df)
-    #     for column in df.columns.tolist():
-    #         print(column)
-    #         df['rolling_avg_' + column] = df[column].rolling(rolling_avg).mean()
-    #         print(df['rolling_avg_' + column])
-    #
-    #     # rolling_window_obj = row.rolling(window)
-    #     # rolling_window_obj = df[date_columns].loc[idx].rolling(window)
-    # #     rolling_average = rolling_window_obj.mean()
-    # #     print(type(rolling_average))
-    # #     # print(rolling_average)
-    # #     # df.loc[idx] = rolling_average
-    # #     # df
-    # # # print(df[date_columns].loc[idx])
-    # #
-    # #
-    # #     data[ '7day_rolling_avg' ] = data.Births.rolling( 7).mean()
 
     # perform normalization
     for idx, row in df.iterrows():
+        if rolling_avg not in [None, '']:
+            rolling_window_obj = row.rolling(int(rolling_avg))
+            rolling_average = rolling_window_obj.mean()
+            df.loc[idx] = rolling_average
+
         # print('\n' + str(idx))
         id1 = str(df.loc[idx, 'unique_id1'])
         id2 = str(df.loc[idx, 'unique_id2'])

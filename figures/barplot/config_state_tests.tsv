@@ -1,0 +1,26 @@
+param	value	note
+input	tests_states.tsv	# input file
+scale	absolute	# scale of the data to be plotted as stacks
+y_var	state	# main variable, shown on Y axis
+x_label	Estados	# X label
+y_label	Número de testes	# Y label
+groupby	country	# column containing categories of data to be plotted as subplots
+plot_kind	bar	# type of plot: bar, barh
+filter		# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
+ignore_cols		# columns to be ignored in the line plot
+colour_by	state	# variable to be represented in the colour scheme
+colour_scheme	nipy_spectral	# colour pallete, if colour file not provided
+legend		# Legend position (e.g. best , upper left, etc). If left empty, no legend will be displayed)
+plot_label		# Label position (e.g. best , upper left, etc. If left empty, no legend will be displayed)
+column_legend	1	# number of columns of the legend
+tick_every	1	# frequency of tick in X axis
+tick_order		# order of ticks in non-numerical axis
+show_grid	y	# show grip for X or Y axis?
+nrows	1	# number of rows of the multiplot
+ncols	1	# number of columns of the multiplot
+same_yscale	no	# same Y axis scale
+same_xscale	no	# same Y axis scale
+min_y		# minimum value for Y axis
+max_y		# maximum value for Y axis
+log_scale	no	# convert values to white scale
+figsize	7, 4	# figure size: width and height, in inches

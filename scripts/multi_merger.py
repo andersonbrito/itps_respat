@@ -23,20 +23,28 @@ if __name__ == '__main__':
     )
     parser.add_argument("--path", required=False, help="Metadata file 1")
     parser.add_argument("--regex", required=False, default='*.*', help="Regular expression that identifies input files")
+    parser.add_argument("--index", required=False, help="Unique identifier ")
+    parser.add_argument("--columns", required=False,  help="List of columns to be included, following the provided order of columns."
+                                                           "It can be provided as a file, one column name per line, or as a comma-separated list of columns.")
     parser.add_argument("--filters", required=False, type=str, help="Format: '~column_name:value'. Remove '~' to keep only that data category")
-    parser.add_argument("--fillna", required=False, default='\'\'', help="Filler to replace NA data points")
+    parser.add_argument("--fillna", required=False, default='', help="Filler to replace NA data points")
     parser.add_argument("--output", required=True, help="Merged file")
     args = parser.parse_args()
 
     path = args.path
     regex = args.regex
+    index = args.index
+    columns = args.columns
     filters = args.filters
     filler = args.fillna
     output = args.output
 
-    # path = '/Users/anderson/google_drive/ITpS/projetos_itps/resp_pathogens/analyses/20210113_relatório1/results/country/'
-    # regex = '*.tsv'
-    # fillna = None
+    # path = '/Users/anderson/google_drive/ITpS/projetos_itps/metasurvBR/data/metadata_genomes/test_multimerger/'
+    # regex = 'metadata_*'
+    # index = 'strain'
+    # columns = path + 'columns.txt'
+    # filters = ''
+    # filler = None
     # output = path + 'merged.tsv'
 
     def load_table(file):
@@ -119,25 +127,39 @@ if __name__ == '__main__':
             subdf = filter_df(subdf, filters)
         ldf.append(subdf)
 
+    # merge dataframes
     df = pd.concat(ldf)
+
 
     if filler in ['', None]:
         filler = ''
     df.fillna(filler, inplace=True)
     # print(df)
 
-    # # nextstrain metadata
-    # df1 = load_table(metadata1)
-    # df1.fillna('', inplace=True)
-    #
-    # # Extra metadata
-    # df2 = load_table(metadata2)
-    # df2.fillna('', inplace=True)
-    #
-    # # merge frames
-    # frames = [df1, df2]
-    # result = pd.concat(frames)
-    # result.fillna('', inplace=True)
+
+    # remove duplicates
+    if index not in ['', None]:
+        duplicates = df.loc[df[index].duplicated(), :][index].tolist()
+        if len(duplicates) > 0:
+            print('\nA total of ' + str(len(duplicates)) + ' duplicates were found:')
+            for d in duplicates:
+                print('\t- ' + d)
+        df = df.drop_duplicates(subset=index, keep="last")
+
+
+    if columns not in [None, '']:
+        if os.path.isfile(columns):
+            order_cols = [item.strip() for item in open(columns).readlines()]
+        else:
+            if ',' in columns:
+                order_cols = [x.strip() for x in columns.split(',')]
+            else:
+                order_cols = [columns]
+        print('\nThese columns will be included, in this order:')
+        for c in order_cols:
+            print('\t- ' + c)
+        df = df[order_cols]
+
     df.to_csv(output, sep='\t', index=False)
 
     print('\nTSV metadata files successfully merged.\n')

@@ -3,6 +3,9 @@ from epiweeks import Week
 import argparse
 import time
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import platform
 print('Python version:', platform.python_version())
 print('Pandas version:', pd.__version__)
@@ -17,6 +20,8 @@ if __name__ == '__main__':
                         choices=['week', 'month', 'year'], help="Time unit for conversion")
     parser.add_argument("--format",required=False, nargs=1, type=str, default='float',
                         choices=['float', 'integer'], help="What is the format of the data points (float/integer)?")
+    parser.add_argument("--weekasdate",required=False, nargs=1, type=str, default='no',
+                        choices=['start', 'end'], help="If representing weeks as date, which day of the week should be used?")
     parser.add_argument("--start-date", required=False, type=str,  help="Start date in YYYY-MM-DD format")
     parser.add_argument("--end-date", required=False, type=str,  help="End date in YYYY-MM-DD format")
     parser.add_argument("--output", required=True, help="TSV matrix with aggregated counts")
@@ -26,6 +31,7 @@ if __name__ == '__main__':
     input = args.input
     unit = args.unit[0]
     data_format = args.format[0]
+    weekasdate = args.weekasdate[0]
     start_date = args.start_date
     end_date = args.end_date
     output = args.output
@@ -40,7 +46,6 @@ if __name__ == '__main__':
     # end_date = '2021-05-31' # end date of period of interest
     # start_date = None
     # end_date = None
-    print(input, output)
 
     def load_table(file):
         df = ''
@@ -93,7 +98,14 @@ if __name__ == '__main__':
             date = pd.to_datetime(value)
             if unit == 'week':
                 epiweek = str(Week.fromdate(date, system="cdc")) # get epiweeks
-                epiweek = epiweek[:4] + '_' + 'EW' + epiweek[-2:]
+                year, week = epiweek[:4], epiweek[-2:]
+                if weekasdate not in ['', None]:
+                    if weekasdate == 'start':
+                        epiweek = str(Week(int(year), int(week)).startdate())
+                    else:
+                        epiweek = str(Week(int(year), int(week)).enddate())
+                else:
+                    epiweek = year + '_' + 'EW' + week
                 if epiweek not in time_cols:
                     time_cols.append(epiweek)
                 return epiweek
@@ -107,8 +119,13 @@ if __name__ == '__main__':
                 if year not in time_cols:
                     time_cols.append(year)
                 return year
+            elif unit == 'full':
+                return 'total'
         else:
-            return value
+            if unit == 'full':
+                return 'total'
+            else:
+                return value
 
     # print(df.head())
     # filter, transpose, convert dates to epiweeks, and re-transpose

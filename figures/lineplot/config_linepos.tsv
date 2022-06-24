@@ -1,17 +1,19 @@
 param	value	note
-input	combined_matrix_country_posrate.tsv	# input file
+input	combined_matrix_country_posrate_weeks.tsv	# input file
 categories	pathogen	# main variable, shown on Y axis
 min_y	-0.1	# minimum value for Y axis
-max_y	0.8	# maximum value for Y axis
+max_y	0.6	# maximum value for Y axis
 y_format	percentage	# Format of Y axis valus (percentage or ratio)
-rolling_average	no	# Should rolling average be calculated?
-window	3	# Rolling average window (average every X values)
+rolling_average	1	# Should rolling average be calculated?
 xlabel		# X label
-ylabel	Taxa de positividade de testes\n(RT-PCR e FlowChip)	# Y label
-tick_every	3	# frequency of tick in X axis
-filter	test_result:Positive, pathogen:SC2, pathogen:FLUA, pathogen:VSR	# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
-ignore_cols	country, test_result, 2022-02-06, 2022-02-07, 2022-02-08	# columns to be ignored in the line plot
+ylabel		# Y label
+category_order		# order of categories listed in 'categories'
+tick_every	1	# frequency of tick in X axis
+filter	test_result:Positive, pathogen:SC2, pathogen:FLUA, pathogen:FLUB, pathogen:VSR	# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
+ignore_cols	country, test_result, 2021-12-25, 2022-01-01, 2022-01-08, 2022-01-15, 2022-01-22, 2022-01-29	# columns to be ignored in the line plot
 colours	colors.tsv	# colours to be assigned to each line, in alphabetic order of yvar
+show_markers	5	# show markers at each point? If yes, add value > 0, if no, add zero.
 show_grid	y	# show grip for X or Y axis?
 show_legend	no	# yes or no
-figsize	6, 3	# figure size: width and height, in inches
+figsize	7, 3.5	# figure size: width and height, in inches
+backend	pdf	# matplotlib backend (recommended: pdf, Qt5Agg). Options: 'GTK3Agg', 'GTK3Cairo', 'GTK4Agg', 'GTK4Cairo', 'MacOSX', 'nbAgg', 'QtAgg', 'QtCairo', 'Qt5Agg', 'Qt5Cairo', 'TkAgg', 'TkCairo', 'WebAgg', 'WX', 'WXAgg', 'WXCairo', 'agg', 'cairo', 'pdf', 'pgf', 'ps', 'svg', 'template'

@@ -18,6 +18,7 @@ import itertools
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 import platform
 # print('Python version:', platform.python_version())
@@ -47,6 +48,7 @@ if __name__ == '__main__':
     parser.add_argument("--end-date", required=False, type=str,  help="End date in YYYY-MM-DD format")
     parser.add_argument("--output", required=True, help="TSV matrix")
     args = parser.parse_args()
+    # print(args)
 
     input = args.input
     x_var = args.xvar
@@ -64,21 +66,21 @@ if __name__ == '__main__':
     end_date = args.end_date
     output = args.output
 
-    # path = '/Users/anderson/google_drive/ITpS/projetos_itps/resp_pathogens/analyses/20210113_relatório1/results/'
-    # input = path + 'combined_testdata.tsv'
-    # x_var = 'age_group'
-    # x_type = ''
-    # y_var = ['SC2_test_result', 'sex', 'epiweek']
-    # y_unique_id = 'sex'
-    # target_variable = ''
-    # sum_target = ''
+    # path = '/Users/anderson/google_drive/ITpS/projetos_colaboracoes/phyloDF/data/epidemiology/brasil/tsv/'
+    # input = path + 'painel_short.tsv'
+    # x_var = 'data'
+    # x_type = 'time'
+    # y_var = ['codmun']
+    # y_unique_id = 'codmun'
+    # target_variable = 'casosNovos'
+    # sum_target = 'no'
     # data_format = 'integer'
-    # add_id_cols = ''
-    # extra_cols = ''
-    # filters = "SC2_test_result:Positive, epiweek:2022_EW03, sex:F, sex:M, ~age_group:"
-    # timevar = 'date_testing'
-    # start_date = '2021-11-14' # start date above this limit
-    # end_date = None # end date below this limit
+    # add_id_cols = 'pais:Brasil'
+    # extra_cols = ['regiao', 'estado', 'municipio', 'coduf']
+    # filters = "~codmun:"
+    # timevar = ''
+    # start_date = '2020-03-01' # start date above this limit
+    # end_date = '2021-12-31' # end date below this limit
     # output = path + 'matrix.tsv'
 
     def load_table(file):
@@ -103,9 +105,6 @@ if __name__ == '__main__':
 
     for idx in y_var:
         df = df[~df[idx].isin([''])]
-
-
-
 
     # filter rows
     def filter_df(df, criteria):
@@ -161,10 +160,7 @@ if __name__ == '__main__':
     # load data
     if filters not in ['', None]:
         df = filter_df(df, filters)
-    # print(set(df['age_group'].tolist()))
-
-    # print(set(df['epiweek'].tolist()))
-
+    # print(df[y_var])
 
     # filter by time
     if x_type == 'time':
@@ -174,15 +170,21 @@ if __name__ == '__main__':
     if timevar not in ['', None]:
         today = time.strftime('%Y-%m-%d', time.gmtime())
 
+        df[timevar] = df[timevar].str.replace('/', '-', regex=False)
+
         # assess date completeness
         df = df[df[timevar].apply(lambda x: len(x.split('-')) == 3)]  # accept only full dates
         df = df[df[timevar].apply(lambda x: 'X' not in x)] # exclude -XX-XX missing dates
 
+        # print(timevar)
+        # print(df[timevar])
+
         df[timevar] = pd.to_datetime(df[timevar])  # converting to datetime format
         if start_date in [None, '']:
-            start_date = df[timevar].min()
+            start_date = df[timevar].min().strftime('%Y-%m-%d')
         if end_date in [None, '']:
             end_date = today
+        print('\n\t- Filtering data by ' + '\"' + timevar + '\": ' + start_date + ' > ' + end_date)
         mask = (df[timevar] >= start_date) & (df[timevar] <= end_date)  # mask any lines with dates outside the start/end dates
         df = df.loc[mask]  # apply mask
         df[timevar] = df[timevar].dt.strftime('%Y-%m-%d')
@@ -198,11 +200,6 @@ if __name__ == '__main__':
     for col_index in y_var:
         # ids = []
         ids = list(set(df[col_index].tolist()))
-        # for idx, row in df.iterrows():
-        #     id = df.loc[idx, col_index]
-        #     if id not in ids:
-        #         print(id)
-        #         ids.append(id)
         list_ids.append(ids)
     # print(list_ids)
 
@@ -214,10 +211,9 @@ if __name__ == '__main__':
     # set new indices
     df.insert(0, 'unique_id1', '')
     df['unique_id1'] = df[y_var].astype(str).sum(axis=1)
+    df['unique_id1'] = df['unique_id1'].astype(str)
     df.insert(1, 'unique_id2', '')
     df['unique_id2'] = df[y_unique_id]#.astype(str).sum(axis=1)
-
-    # # index = pd.MultiIndex.from_tuples(rows, names=y_var)
     df2 = pd.DataFrame(columns=data_cols)
     # df2['unique_id1'] = df2[y_var].astype(str).sum(axis=1)
 
@@ -225,6 +221,8 @@ if __name__ == '__main__':
     df2.insert(0, 'unique_id1', '')
     for y_col in y_var:
         df2.insert(0, y_col, '')
+
+
     rows = list(itertools.product(*list_ids))
     for idx, id_names in enumerate(rows):
         unique_id1 = ''.join(id_names)
@@ -272,7 +270,6 @@ if __name__ == '__main__':
 
     df.set_index('unique_id1', inplace=True)
     df = df[~df.index.duplicated(keep='first')]
-    #
     # print(df.head)
     # print(df2.head)
     # print(df2)
@@ -293,7 +290,7 @@ if __name__ == '__main__':
     for idx, row in df1.iterrows():
         x = df1.loc[idx, x_var]
         y = df1.loc[idx, 'unique_id1']
-        count = df1.loc[idx, 'count']
+        count = int(df1.loc[idx, 'count'])
         if count < 0:
             count = 0
         df2.at[y, x] = count

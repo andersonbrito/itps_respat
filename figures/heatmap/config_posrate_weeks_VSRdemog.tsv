@@ -1,0 +1,18 @@
+param	value	note
+input	matrix_agegroups_weeks_VSR_posrate.tsv	# input file
+yvar	age_group	# main variable, shown on Y axis
+bins	12	# number of bins in heatmap
+xlabel	Faixa etária	# X label
+ylabel		# Y label
+min_value	0	# minimum value
+max_value	0.3	# maximum value
+category_order	80+, 69-79, 59-69, 49-59, 39-49, 29-39, 19-29, 9-19, 4-9, 0-4	# order of categories listed in 'categories'
+filter	VSR_test_result:Positive	# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
+ignore_cols	VSR_test_result, country, 2021-11-20, 2021-11-27, 2021-12-04, 2021-12-11, 2021-12-18, 2021-12-25, 2022-01-01, 2022-01-08, 2022-01-15, 2022-01-22, 2022-01-29, 2022-05-28	# columns to be ignored in the line plot
+colours	coolwarm	# colours to be assigned to each line
+show_annotations	yes	# yes or no
+label_format	percentage	# Format of the annotations on heatmap cells
+show_legend	yes	# yes or no
+tick_every	3	# frequency of tick in X axis
+figsize	7, 6	# figure size: width and height, in inches
+backend	pdf	# matplotlib backend (recommended: pdf, Qt5Agg). Options: 'GTK3Agg', 'GTK3Cairo', 'GTK4Agg', 'GTK4Cairo', 'MacOSX', 'nbAgg', 'QtAgg', 'QtCairo', 'Qt5Agg', 'Qt5Cairo', 'TkAgg', 'TkCairo', 'WebAgg', 'WX', 'WXAgg', 'WXCairo', 'agg', 'cairo', 'pdf', 'pgf', 'ps', 'svg', 'template'

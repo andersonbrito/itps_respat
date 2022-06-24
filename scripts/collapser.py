@@ -88,7 +88,7 @@ if __name__ == '__main__':
     df = load_table(input)
     df.fillna('', inplace=True)
     # df.set_index(groupby, inplace=True)
-
+    
     added_cols = []
     # add new columns with identifiers
     if add_cols not in ['', None]:

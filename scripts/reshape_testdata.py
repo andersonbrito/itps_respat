@@ -3,7 +3,7 @@
 # Created by: Anderson Brito
 # Email: anderson.brito@itps.org.br
 # Release date: 2021-12-05
-# Last update: 2021-12-28
+# Last update: 2022-04-26
 
 import pandas as pd
 import os
@@ -15,6 +15,10 @@ from epiweeks import Week
 
 pd.set_option('display.max_columns', 500)
 pd.options.mode.chained_assignment = None
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 today = time.strftime('%Y-%m-%d', time.gmtime())
 import platform
@@ -151,7 +155,7 @@ if __name__ == '__main__':
                 if len(found) > 0:
                     for g in found:
                         if g not in genes:
-                            print('Gene ' + g + ' in an anomaly. Check for inconsistencies')
+                            print('\t\t- Gene ' + g + ' is so far unknown as a target. Check for inconsistencies in the file named above.')
 
                 # print(failures[code])
                 if 'MS2' in failures[code]:
@@ -262,7 +266,7 @@ if __name__ == '__main__':
 
     # create epiweek column
     def get_epiweeks(date):
-        date = pd.to_datetime(date)
+        date = pd.to_datetime(date, errors='coerce')
         epiweek = str(Week.fromdate(date, system="cdc"))  # get epiweeks
         epiweek = epiweek[:4] + '_' + 'EW' + epiweek[-2:]
         return epiweek
@@ -315,7 +319,7 @@ if __name__ == '__main__':
 
     dfT['sample_id'] = dfT['unique_id'].apply(lambda x: generate_id(x))
     key_cols = ['lab_id', 'test_id', 'sample_id', 'Ct_S', 'Ct_N', 'Ct_ORF1ab', 'state', 'location', 'test_result',
-                'sex', 'date_testing', 'age', 'S_detection', 'N_detection', 'ORF1ab_detection']
+                'sex', 'date_testing', 'epiweek', 'age', 'S_detection', 'N_detection', 'ORF1ab_detection']
     for col in dfT.columns.tolist():
         if col not in key_cols:
             dfT = dfT.drop(columns=[col])
@@ -340,3 +344,4 @@ if __name__ == '__main__':
     # output combined dataframe
     dfT.to_csv(output, sep='\t', index=False)
     print('\nData successfully aggregated and saved in:\n%s\n' % output)
+

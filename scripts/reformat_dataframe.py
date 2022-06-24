@@ -20,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument("--targets", required=False,  help="List of columns or rows to be added, remove or modified."
                                                            "It can be provided as a file, one target per line, or as a comma-separated list of targets.")
     parser.add_argument("--filter", required=False, type=str, help="Format: '~column_name:value'. Remove '~' to keep only that data category")
+    parser.add_argument("--date-column", required=False, type=str, help="Time variable, when x variable is not temporal data")
     parser.add_argument("--start-date", required=False, type=str,  help="Start date in YYYY-MM-DD format")
     parser.add_argument("--end-date", required=False, type=str,  help="End date in YYYY-MM-DD format")
     parser.add_argument("--sortby", nargs='+', required=False, type=str, help="List of columns to be used to sort the dataframe")
@@ -33,25 +34,29 @@ if __name__ == '__main__':
     mode = args.mode
     list_targets = args.targets
     filters = args.filter
+    date_col = args.date_column
     start_date = args.start_date
     end_date = args.end_date
     sortby = args.sortby
     output = args.output
 
 
-    # path = '/Users/anderson/GLab Dropbox/Anderson Brito/ITpS/projetos_itps/vigilancia/nextstrain/run12_20220104_report7/pre-analyses/'
-    # input1 = path + 'metadata_2021-12-31_BRonly.tsv' # target file
-    # input2 = path + '' # new data file
-    # index = '' # index in common between both dataframes
-    # action = 'filter'
+    # path = '/Users/anderson/google_drive/ITpS/projetos_itps/metasurvBR/data/metadata_genomes/'
+    # input1 = path + 'metadata_2022-02-26_complement_seqtech_labs_geo10.tsv' # target file
+    # input2 = path + 'changes_locations.tsv' # new data file
+    # # index = 'Estado' # index in common between both dataframes
+    # action = 'modify'
     # mode = 'rows'
     # # list_targets = path + 'columns.tsv' # list of columns
-    # list_targets = ''
-    # sortby = 'date'
-    # filters = 'country_exposure:Brazil'
-    # start_date = 'date:2020-03-01' # start date above this limit
-    # end_date = 'date:2021-12-31' # end date below this limit
-    # output = path + 'filtered.tsv'
+    # list_targets = None
+    # sortby = None
+    # filters = ''
+    # date_col = None
+    # start_date = '' # start date above this limit
+    # end_date = '' # end date below this limit
+    # output = path + 'matrix_fixed.tsv'
+
+
 
     def load_table(file):
         df = ''
@@ -86,7 +91,7 @@ if __name__ == '__main__':
 
     # filter by time
     def time_filter(df, time_var, start_date, end_date):
-        print('\nFiltering by date: ' + start_date + ' > ' + end_date)
+        print('\nFiltering by \"%s\": %s -> %s' % (time_var, start_date, end_date))
         df[time_var] = pd.to_datetime(df[time_var])  # converting to datetime format
         if start_date in [None, '']:
             start_date = df[time_var].min()
@@ -98,81 +103,6 @@ if __name__ == '__main__':
         df = df.loc[mask]  # apply mask
         df[time_var] = df[time_var].dt.strftime('%Y-%m-%d')
         return df
-
-    found = {}
-    notfound = {}
-    if action == 'add' and mode == 'columns':
-        match = []
-        def add_values(query, df, column):
-            value = ''
-            if query not in [None, '', np.nan]:
-                lower_query = unidecode.unidecode(query).lower()
-                dindexes = {unidecode.unidecode(x).lower(): x for x in df.index.tolist()}
-                # print(dindexes)
-                if lower_query in dindexes:
-                    value = df.loc[dindexes[lower_query], column]
-                    # print(query, lower_query, dindexes[lower_query], value)
-                    # print(query, value)
-                    if query not in match:
-                        # print('\t- ' + query)
-                        match.append(query)
-                else:
-                    # print(query, lower_query)
-                    if column not in notfound:
-                        notfound[column] = [query]
-                    else:
-                        if query not in notfound[column]:
-                            notfound[column] += [query]
-            else:
-                pass
-            return value
-
-        # source of new columns
-        if input2 != None:
-            df2 = load_table(input2)
-            df2.fillna('', inplace=True)
-            df2 = df2.set_index(index)
-
-        print('\n# Adding new columns')
-        if len(targets) > 0:
-            for col in targets:
-                print('\t- ' + col)
-
-        df1 = df1.sort_values(index)
-        # dindexes = {unidecode.unidecode(x).lower(): x for x in df2.index.tolist()}
-        for new_column in targets:
-            df1[new_column] = df1[index].apply(lambda x: add_values(x, df2, new_column))
-            # df1[new_column] = df1[index].str.lower().replace(dindexes, inplace=True)
-
-    if action == 'modify' and mode == 'rows':
-        # source of new data
-        df2 = ''
-        if input2 != None:
-            df2 = load_table(input2)
-            # df2 = pd.read_csv(path + input2, encoding='utf-8', sep='\t', dtype=str)
-            df2.fillna('', inplace=True)
-        else:
-            print('File with reference values to be modified is missing. Provide \'--input2\'')
-            exit()
-
-        for id2, row2 in df2.iterrows():
-            anchor_col, anchor_val, target_col, new_val = df2.loc[id2, 'anchor_col'], df2.loc[id2, 'anchor_val'], df2.loc[id2, 'target_col'], df2.loc[id2, 'new_val']
-            # for id1, row1 in df1.iterrows():
-            if anchor_val in df1[anchor_col].tolist():
-                df1.loc[df1[anchor_col] == anchor_val, target_col] = new_val
-                if target_col not in found:
-                    found[target_col] = [new_val]
-                else:
-                    if new_val not in found[target_col]:
-                        found[target_col] += [new_val]
-            else:
-                if anchor_col not in notfound:
-                    if new_val not in found[target_col]:
-                        notfound[anchor_col] = [anchor_val]
-                else:
-                    if anchor_val not in notfound[anchor_col]:
-                        if new_val not in found[target_col]:
-                            notfound[anchor_col] += [anchor_val]
 
     # filter rows
     def filter_df(df, criteria):
@@ -225,30 +155,92 @@ if __name__ == '__main__':
             # print(new_df)#.head())
         return new_df
 
+
+    # apply filter
     if filters not in [None, '']:
         print('\nFiltering rows based on user defined filters...')
         if filters not in ['', None]:
             df1 = filter_df(df1, filters)
 
     # Filter by date
-    if start_date or end_date not in [None, '']:
-        start, end = '', ''
-        date_col = ''
-        if start_date not in [None, '']:
-            start = start_date.split(':')[1].strip()
-            if date_col == '':
-                date_col = start_date.split(':')[0].strip()
-        if end_date not in [None, '']:
-            end = end_date.split(':')[1].strip()
-            if date_col == '':
-                date_col = end_date.split(':')[0].strip()
+    if date_col not in ['', None]:
+        if start_date or end_date not in [None, '']:
+            start, end = '', ''
+            if start_date not in [None, '']:
+                start = start_date.strip()
+            if end_date not in [None, '']:
+                end = end_date.strip()
 
-        df1 = time_filter(df1, date_col, start, end)
+            df1 = time_filter(df1, date_col, start, end)
+
+
+
+    found = {}
+    notfound = {}
+    if action == 'add' and mode == 'columns':
+        # source of new columns
+        if input2 != None:
+            df2 = load_table(input2)
+            df2.fillna('', inplace=True)
+            if len(targets) > 0:
+                print('\n# Adding new columns')
+                df2 = df2[[index] + [col.split('#')[0] for col in targets]]
+                df2 = df2.drop_duplicates(keep='last')
+
+                for colname in targets:
+                    position = 0
+                    if '#' in colname:
+                        position = int(colname.split('#')[1]) - 1
+                        colname = colname.split('#')[0]
+
+                    print('\t- ' + str(position + 1) + '. ' + colname)
+                    dict_target = pd.Series(df2[colname].values, index=df2[index]).to_dict()
+                    # print(dict_target)
+
+                    # add column
+                    df1.insert(position, colname, '')
+                    df1[colname] = df1[index].apply(lambda x: dict_target[x] if x in dict_target else '')
+
+
+
+    if action == 'modify' and mode == 'rows':
+        # source of new data
+        df2 = ''
+        if input2 != None:
+            df2 = load_table(input2)
+            # df2 = pd.read_csv(path + input2, encoding='utf-8', sep='\t', dtype=str)
+            df2.fillna('', inplace=True)
+        else:
+            print('File with reference values to be modified is missing. Provide \'--input2\'')
+            exit()
+
+        for id2, row2 in df2.iterrows():
+            ref_col, ref_val, target_col, fixed_val = df2.loc[id2, 'reference_column'], df2.loc[id2, 'reference_value'], df2.loc[id2, 'target_column'], df2.loc[id2, 'fixed_value']
+            # print(ref_col, ref_val, target_col, fixed_val)
+            # print(ref_val, df1[ref_col].tolist())
+            if ref_val in df1[ref_col].tolist():
+                df1.loc[df1[ref_col] == ref_val, target_col] = fixed_val
+                if target_col not in found:
+                    found[target_col] = [fixed_val]
+                else:
+                    if fixed_val not in found[target_col]:
+                        found[target_col] += [fixed_val]
+            else:
+                if ref_col not in notfound:
+                    if fixed_val not in found[target_col]:
+                        notfound[ref_col] = [ref_val]
+                else:
+                    if ref_val not in notfound[ref_col]:
+                        if fixed_val not in found[target_col]:
+                            notfound[ref_col] += [ref_val]
 
 
     if action == 'reorder' and mode == 'columns':
-        pass
-
+        if len(targets) > 0:
+            print('\n# Reordering columns as follows:')
+            for col in targets:
+                print('\t- ' + col)
+            df1 = df1[targets]
 
     if len(found.keys()) > 0:
         print('\n# Fixed data points')

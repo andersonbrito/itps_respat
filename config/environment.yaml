@@ -1,0 +1,22 @@
+name: diag
+channels:
+- bioconda
+- conda-forge
+- defaults
+
+dependencies:
+- python=3.7.6*
+- snakemake-minimal=6.12.3
+- openpyxl
+- xlrd
+- geopandas
+- geopy
+- unidecode
+- matplotlib
+- gdal
+- shapely
+- pip
+
+- pip:
+  - epiweeks
+  - pycountry-convert

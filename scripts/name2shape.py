@@ -28,6 +28,7 @@ if __name__ == '__main__':
     parser.add_argument("--input", required=True, help="TVS file containing location names")
     parser.add_argument("--shapefile", required=True, help="Shapefile with polygons to be matched with location names")
     parser.add_argument("--display", required=False, default='no', choices=['no', 'yes'], help="Display header of the shapefile for inspection, and exit?")
+    parser.add_argument("--fix-projection", required=False, default='no', choices=['no', 'yes'], help="Fix map projection of second shape file base on the first one provided?")
     parser.add_argument("--geo-columns", required=False, help="List of columns with distinct levels of geographic names to be searched")
     parser.add_argument("--add-geo", required=False, help="Extra column to be added with standard value applicable to all entries, e.g. 'country:Brazil'")
     parser.add_argument("--lat", required=False, default='lat', help="Column containing latitude data, if already existing in input file")
@@ -43,6 +44,7 @@ if __name__ == '__main__':
     input = args.input
     shapefile = args.shapefile
     display_header = args.display
+    fix_projection = args.fix_projection
     geo_cols = args.geo_columns
     add_geo_cols = args.add_geo
     output_coordinates = args.save_latlong
@@ -54,10 +56,12 @@ if __name__ == '__main__':
     same_file = args.same_format
     output = args.output
 
-    # path = '/Users/anderson/google_drive/ITpS/projetos_itps/resp_pathogens/analyses/20210113_relatório1/'
-    # input = path + 'results/combined_testdata2.tsv'
-    # shapefile = '/Users/anderson/GLab Dropbox/Anderson Brito/codes/geoCodes/bra_adm_ibge_2020_shp/bra_admbnda_adm2_ibge_2020.shp'
+    # path = '/Users/anderson/google_drive/ITpS/projetos_itps/resp_pathogens/analyses/20220314_relatorio3/'
+    # os.chdir(path)
+    # input = path + 'combined_testdata2_short.tsv'
+    # shapefile = "/Users/anderson/google_drive/codes/geoCodes/bra_adm_ibge_2020_shp/bra_admbnda_adm2_ibge_2020.shp"
     # display_header = 'no'
+    # fix_projection = 'no'
     # geo_cols = "state, location"
     # add_geo_cols = 'country:Brazil'
     # output_coordinates = 'no'
@@ -67,7 +71,7 @@ if __name__ == '__main__':
     # check_col = 'ADM2_PT'
     # target_cols = "ADM1_PT, ADM1_PCODE, ADM2_PT, ADM2_PCODE"
     # same_file = 'yes'
-    # output = path + "results1/combined_testdata_geo.tsv"
+    # output = path + "test.tsv"
 
     geolocator = Nominatim(user_agent="email@gmail.com")  # add your email here
 
@@ -100,7 +104,11 @@ if __name__ == '__main__':
                 print('\t- ' + col + ' = ' + str(val[0]))
             else:
                 print('\t- ' + col + ' = POLYGON (...)')
+
+        shapedata = geodf.drop(columns='geometry')
+        shapedata.to_csv('shapedata.tsv', sep='\t', index=False)
         exit()
+
 
     # Load sample metadata
     df1 = load_table(input)
@@ -125,6 +133,8 @@ if __name__ == '__main__':
         long_col = 'long'
         df1[lat_col] = ''
         df1[long_col] = ''
+
+
 
     # cache coordinates
     df3 = pd.DataFrame()
@@ -222,12 +232,16 @@ if __name__ == '__main__':
                     df['lat'] = lat
                     df['long'] = long
                     df['geometry'] = Point(long, lat)
+                    # df['geometry'] = Point(lat, long)
                     df2 = df2.append(df, ignore_index=True)  # geodataframe used as output
                     print('\t- ' + ', '.join(query) + ': ' + str(len(df.index)) + ' samples *')
                 found[', '.join(query)] = coord
             else:
+                df2 = df2.append(df, ignore_index=True)  # geodataframe used as output
                 if ', '.join(query) not in notfound:
                     notfound.append(', '.join(query))
+
+    # print(df2.head())
 
     if len(notfound) > 0:
         print('\nWARNING!\nCoordinates for these entries were not found.\n'
@@ -235,14 +249,31 @@ if __name__ == '__main__':
         for entry in notfound:
             print('\t- ' + entry)
 
-    # print(df2)
+    # print(df3)
 
     if cache not in [None, '']:
-        df3 = df3.drop(columns=['place', 'coordinates'])
+        if 'place' in df3.columns.tolist():
+            df3 = df3.drop(columns=['place', 'coordinates'])
         df3.to_csv(cache, sep='\t', index=False)
 
-    # print(df2.columns.tolist())
-    # print(geodf.columns.tolist())
+
+    if fix_projection == 'yes':
+        geodf = geodf.to_crs(epsg=4326)
+        # get CRS info
+        if df2.crs != geodf.crs:
+            # print(df2.crs)
+            # print(geodf.crs)
+            projection = int(str(geodf.crs).split(':')[1])
+            # print(projection)
+            if df2.crs == None:
+                df2 = df2.set_crs(epsg=projection)
+            else:
+                df2 = df2.to_crs(epsg=projection)
+            # print(df2.crs)
+            # print(geodf.crs)
+
+    # print(df2.head())
+    # print(geodf.head())
 
     # find shapes where points are located
     results = gpd.sjoin(df2, geodf, how='left', op='within')
@@ -252,13 +283,12 @@ if __name__ == '__main__':
     else:
         output_cols = geo_cols + [lat_col, long_col] + target_cols # filter columns
 
-    # print(results.columns)
+    # print(results.head())
     results = results[output_cols]
 
     # print(results)
     # override and fill empty state data points
-    df1['ADM1_PT'] = df1['state'].apply(lambda x: state_codes[x] if x in state_codes else x)
-
+    # df1['ADM1_PT'] = df1['state'].apply(lambda x: state_codes[x] if x in state_codes else x)
 
     def similar(a, b):
         return SequenceMatcher(None, a, b).ratio()
@@ -270,24 +300,29 @@ if __name__ == '__main__':
             orig_name = results.loc[id2, last_level]
             new_name = results.loc[id2, check_col]
             # print(orig_name, ' >>> ', new_name, ':', str(similar(orig_name, new_name)))
-            if len(new_name) <= 4:
+            if len(str(new_name)) <= 4:
                 threshold = 0.65
-            if similar(orig_name.lower(), new_name.lower()) < threshold:
+            if similar(str(orig_name).lower(), str(new_name).lower()) < threshold:
                 # print(orig_name, ' >>> ', new_name, ':', str(similar(orig_name, new_name)))
-                mismatches.append(orig_name + ' > ' + new_name)
+                entry = str(orig_name) + ' > ' + str(new_name)
+                if entry not in mismatches:
+                    mismatches.append(entry)
                 # results = results.drop(id2)
 
     if len(mismatches) > 0:
         print('\nWARNING!\nMismatches between the original location names and names in shapefiles were detected.\n'
               'These entries may need to have their coordinates assigned manually, or their names may need to be fixed.\n')
         for entry in mismatches:
-            print('\t- ' + entry)
+            print('\t' + entry)
 
     # output updated dataframe
     if output_coordinates != 'yes':
-        result = results.drop(columns=['lat', 'long'])
+        results = results.drop(columns=['lat', 'long'])
     results.to_csv(output, sep='\t', index=False)
     print('\nLocation names successfully matched to shapefile.\n\t- Output was saved :%s\n' % output)
 
 
 
+    # geodf.plot()
+    # import matplotlib.pyplot as plt
+    # plt.show()
