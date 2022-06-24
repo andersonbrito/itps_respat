@@ -12,7 +12,7 @@ conda install -n base conda-forge::mamba
 Agora clone este repositório:
 Clone this repository `ncov`
 ```
-git clone https://github.com/andersonbrito/itps_sgtf.git
+git clone https://github.com/andersonbrito/itps_respat.git
 ```
 
 Uma vez instalados `conda` e `mamba`, acesse o diretório `config`, e execute os seguintes comandos para criar o ambiente conda `diag`:
