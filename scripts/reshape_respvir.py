@@ -224,7 +224,7 @@ if __name__ == '__main__':
             dfN = pd.DataFrame()
             unique_cols = list(set(dfL.columns.tolist()))
             for idx, row in dfL.iterrows():
-                data = {'Ct_FluA': '', 'Ct_FluB': '', 'Ct_VSR': '', 'Ct_RDRP': '', } # one data row for each request
+                data = {} # one data row for each request
                 for col in unique_cols:
                     value = dfL.loc[idx, col]
                     # data[col] = dfL[col].tolist()[0]
@@ -265,7 +265,7 @@ if __name__ == '__main__':
 
             for i, (code, dfG) in enumerate(dfL.groupby('NumeroPedido')):
                 # print('>' + str(i))
-                data = {'Ct_FluA': '', 'Ct_FluB': '', 'Ct_VSR': '', 'Ct_RDRP': '', } # one data row for each request
+                data = {}
                 unique_cols = [col for col in dfG.columns.tolist() if len(list(set(dfG[col].tolist()))) == 1]
                 for col in unique_cols:
                     data[col] = dfG[col].tolist()[0]
@@ -310,8 +310,7 @@ if __name__ == '__main__':
             unique_cols = list(set(dfL.columns.tolist()))
 
             for i, (code, dfR) in enumerate(dfL.groupby('codigorequisicao')):
-                data = {'Ct_FluA': '', 'Ct_FluB': '', 'Ct_VSR': '', 'Ct_RDRP': '', } # one data row for each request
-
+                data = {} # one data row for each request
                 for col in unique_cols:
                     data[col] = dfR[col].tolist()[0]
 
@@ -353,6 +352,17 @@ if __name__ == '__main__':
                                     # print('\t - ' + gene + ' (' + str(ct_value) + ') = ' + data[virus + '_test_result'])
                                     if data[virus + '_test_result'] != 'DETECTADO':
                                         data[virus + '_test_result'] = result
+                            # else:
+                            #     line2 = str(code) + '\t' + gene + '\t' + str(ct_value) + '\t' + dfG.loc[idx, 'positivo'] + '\t' + str(len(dfR.index)) + '\t' + file + '\n'
+                            #     # print(line2)
+                            #     # outfile2.write(line2)
+                            #     if data[virus + '_test_result'] != 'DETECTADO':
+                            #         # print('duplicate?')
+                            #         if result == 'DETECTADO':
+                            #             for p, t in pathogens.items():
+                            #                 if gene in t:
+                            #                     data[virus + '_test_result'] = result # get result as shown in original file
+                            #                     print('\t *** ' + gene + ', Ct = (' + str(ct_value) + ') = ' + data[virus + '_test_result'])
                         else:
                             found.append(gene)
 
@@ -423,6 +433,8 @@ if __name__ == '__main__':
                         df = fix_datatable(df, id, filename) # reformat datatable
                         df.insert(0, 'lab_id', id)
                         df = rename_columns(id, df) # fix data points
+                        dfT = dfT.reset_index(drop=True)
+                        df = df.reset_index(drop=True)
                         frames = [dfT, df]
                         df2 = pd.concat(frames)
                         dfT = df2
@@ -451,13 +463,7 @@ if __name__ == '__main__':
             # print('\t- ' + column + ' (' + column + ' → ' + str(values) + ')')
             dfT[column] = dfT[column].apply(lambda x: fix_data_points(lab_id, column, x))
 
-#     for idx, row in dfT.iterrows():
-#         test = dfT.loc[idx, 'date_testing']
-#         test_id = dfT.loc[idx, 'test_id']
-#         lab_id = dfT.loc[idx, 'lab_id']
-#         print(lab_id, test_id, test)
-#     print('Done!')
-    
+
     # reformat dates and get ages
     dfT['date_testing'] = pd.to_datetime(dfT['date_testing'])
 
@@ -479,26 +485,34 @@ if __name__ == '__main__':
     for idx, row in dfT.iterrows():
         birth = dfT.loc[idx, 'birthdate']
         test = dfT.loc[idx, 'date_testing']
-        test_id = dfT.loc[idx, 'test_id']
-        lab_id = dfT.loc[idx, 'lab_id']
-#         age = dfT.loc[idx, 'age']
-        try:
-           if birth not in [np.nan, '', None, pd.NaT] and test not in [np.nan, '', None, pd.NaT]:
-#                print(lab_id, test_id, birth, type(birth), test, type(test), age, type(age))
-               birth = pd.to_datetime(birth)
-               age = (test - birth) / np.timedelta64(1, 'Y')
-               dfT.loc[idx, 'age'] = np.round(age, 1)
-        except:
-            print('\nAn issue was found in this sample:')
-            print('\n\t- Lab ID = ' + lab_id)
-            print('\t- Test ID = ' + test_id)
-            print('\t- Test date = ' + test)
-#             print('\t- Age = ' + age)
-            print('\t- Birth date = ' + birth)
-
+        if birth not in [np.nan, '', None]:
+            birth = pd.to_datetime(birth)
+            age = (test - birth) / np.timedelta64(1, 'Y')
+            dfT.loc[idx, 'age'] = np.round(age, 1)
 
     # fix sex information
     dfT['sex'] = dfT['sex'].apply(lambda x: x[0] if x != '' else x)
+
+    # # Add gene detection results
+    # def check_detection(ctValue):
+    #     result = "Not detected"
+    #     try:
+    #         if ctValue[0].isdigit() and float(ctValue) > 0:
+    #             result = "Detected"
+    #     except:
+    #         pass
+    #     return result
+    #
+    # print(dfT)
+    #
+    # # Ct value columns
+    # targets = []
+    # for col in dfT.columns.tolist():
+    #     if col.startswith('Ct_'):
+    #         new_col = col.split('_')[1] + '_detection'
+    #         if new_col not in targets:
+    #             targets.append(new_col)
+    #         dfT[new_col] = dfT[col].apply(lambda x: check_detection(x))
 
     # reset index
     dfT = dfT.reset_index(drop=True)
@@ -513,7 +527,6 @@ if __name__ == '__main__':
         return id
     # print(dfT.columns.tolist())
     # print(dfT[['lab_id', 'date_testing']])
-
 
     dfT['sample_id'] = dfT['unique_id'].apply(lambda x: generate_id(x))
     key_cols = ['lab_id', 'test_id', 'sample_id', 'state_code', 'location', 'sex', 'date_testing', 'epiweek', 'age',

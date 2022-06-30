@@ -9,7 +9,7 @@ plot_kind	bar	# type of plot: bar, barh
 filter		# comma-separated list of rows to keep or remove rows. Format: '~column_name:value'. Remove '~' to keep only that data category.
 ignore_cols	2021-12-25, 2022-01-01, 2022-01-08, 2022-01-15, 2022-01-22, 2022-01-29	# columns to be ignored in the line plot
 colour_by	test_result	# variable to be represented in the colour scheme
-colour_scheme		# colour pallete, if colour file not provided
+colour_scheme	colors.tsv	# colour pallete, if colour file not provided
 legend		# Legend position (e.g. best , upper left, etc. If left empty, no legend will be displayed)
 plot_label		# Legend position (e.g. best , upper left, etc. If left empty, no legend will be displayed)
 column_legend	1	# number of columns of the legend

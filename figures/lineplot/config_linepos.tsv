@@ -2,7 +2,7 @@ param	value	note
 input	combined_matrix_country_posrate_weeks.tsv	# input file
 categories	pathogen	# main variable, shown on Y axis
 min_y	-0.1	# minimum value for Y axis
-max_y	0.6	# maximum value for Y axis
+max_y	0.7	# maximum value for Y axis
 y_format	percentage	# Format of Y axis valus (percentage or ratio)
 rolling_average	1	# Should rolling average be calculated?
 xlabel		# X label

@@ -1,5 +1,5 @@
 # Wildcards setting
-LOCATIONS = ["country", "region", "states"]#, "locations"]
+LOCATIONS = ["country", "region", "states"] #, "locations"]
 SAMPLES = ["FLUA", "FLUB", "VSR", "SC2", 'META', 'RINO', 'PARA', 'ADENO', 'BOCA', 'COVS', 'ENTERO', 'BAC']
 
 
@@ -16,7 +16,7 @@ rule arguments:
 		index_column = "division_exposure",
 		date_column = "date_testing",
 		start_date = "2021-12-19",
-		end_date = "2022-05-21"
+		end_date = "2022-06-25" #atualizar data aqui
 
 arguments = rules.arguments.params
 
