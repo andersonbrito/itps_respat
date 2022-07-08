@@ -135,7 +135,7 @@ if __name__ == '__main__':
             for column in id_columns:
                 if column not in dfL.columns.tolist():
                     dfL[column] = ''
-                    print('\t\t\t - No \'%s\' column found. Please check for inconsistencies. Meanwhile, an empty \'%s\' column was added.' % (column, column))
+                    print('\t\t\t - No \'%s\' column found. Please check for inconsistencies.\nMeanwhile, an empty \'%s\' column was added.' % (column, column))
 
             # generate sample id
             dfL.insert(1, 'sample_id', '')
@@ -236,14 +236,14 @@ if __name__ == '__main__':
                     dfL.rename(columns={'codigo_externo_do_paciente': 'requisicao'}, inplace=True)
                 else:
                     dfL.insert(1, 'requisicao', '')
-                    print('\t\t\t - No \'requisicao\' column found. Please check for inconsistencies. Meanwhile, an empty \'requisicao\' column was added.')
+                    print('\t\t\t - No \'requisicao\' column found. Please check for inconsistencies.\nMeanwhile, an empty \'requisicao\' column was added.')
 
             # print(dfL.columns.tolist())
             id_columns = ['requisicao', 'data', 'idade', 'sexo', 'cidade_norm', 'uf_norm', 'Gene N', 'Gene ORF', 'Gene S']
             for column in id_columns:
                 if column not in dfL.columns.tolist():
                     dfL[column] = ''
-                    print('\t\t\t - No \'%s\' column found. Please check for inconsistencies. Meanwhile, an empty \'%s\' column was added.' % (column, column))
+                    print('\t\t\t - No \'%s\' column found. Please check for inconsistencies.\nMeanwhile, an empty \'%s\' column was added.' % (column, column))
 
             # generate sample id
             dfL.insert(1, 'sample_id', '')
