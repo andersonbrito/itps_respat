@@ -36,7 +36,7 @@ if __name__ == '__main__':
     parser.add_argument("--cache", required=False, help="TSV file with cached coordinates")
     parser.add_argument("--save-latlong", required=False, default='yes', choices=['no', 'yes'], help="Export coordinate columns 'lat' and 'long'?")
     parser.add_argument("--check-match", required=False, help="Column in shapefile containing the names of locations to be matched")
-    parser.add_argument("--target", required=False, help="Comma-separated list of shapefile columns to be exported in the final output")
+    parser.add_argument("--targets", required=False, help="Comma-separated list of shapefile columns to be exported in the final output")
     parser.add_argument("--same-format", required=False, default='yes', choices=['no', 'yes'], help="Should all columns and rows in the input file be exported?")
     parser.add_argument("--output", required=False, help="Name of the TSV output file")
     args = parser.parse_args()
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     long_col = args.long
     cache = args.cache
     check_col = args.check_match
-    target_cols = args.target
+    target_cols = args.targets
     same_file = args.same_format
     output = args.output
 
@@ -125,6 +125,8 @@ if __name__ == '__main__':
     geo_cols = [c.strip() for c in geo_cols.split(',')]
     geo_cols = [c.split(':')[0].strip() for c in new_cols] + geo_cols
     last_level = geo_cols[-1]
+    # print(geo_cols)
+    # print(last_level)
 
     # search coordinates (if any is missing)
     df2 = gpd.GeoDataFrame(columns = geo_cols + [lat_col, long_col] + ['geometry'])
@@ -134,7 +136,7 @@ if __name__ == '__main__':
         df1[lat_col] = ''
         df1[long_col] = ''
 
-
+    # print(df2.head())
 
     # cache coordinates
     df3 = pd.DataFrame()
@@ -147,7 +149,8 @@ if __name__ == '__main__':
             place = [p for p in df3.columns.tolist() if p not in ['lat', 'long']]
             df3['place'] = df3[place].astype(str).agg(', '.join, axis=1)
             df3['coordinates'] = list(zip(df3['lat'], df3['long']))
-
+    
+    
     if not df3.empty:
         found = pd.Series(df3.coordinates.values, index=df3.place).to_dict()
     else:
@@ -169,8 +172,9 @@ if __name__ == '__main__':
         print('\nSearching coordinates...')
 
     if 'state' in df1.columns.tolist():
-        state_codes = {'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia', 'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás', 'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais', 'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí', 'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul', 'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo', 'SE': 'Sergipe', 'TO': 'Tocantins'}
-        df1['state'] = df1['state'].apply(lambda x: state_codes[x] if x in state_codes else x)
+        if len(df1['state'].tolist()[0]) < 3:
+            state_codes = {'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia', 'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás', 'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais', 'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí', 'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul', 'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo', 'SE': 'Sergipe', 'TO': 'Tocantins'}
+            df1['state'] = df1['state_code'].apply(lambda x: state_codes[x] if x in state_codes else x)
     df1 = df1.sort_values(by=geo_cols)
 
     # print(df1['state'])
@@ -276,8 +280,15 @@ if __name__ == '__main__':
     # print(geodf.head())
 
     # find shapes where points are located
+    df2 = df2[df2.geometry.type == 'Point']
+
     results = gpd.sjoin(df2, geodf, how='left', op='within')
-    target_cols = [c.strip() for c in target_cols.split(',')]
+
+    if target_cols not in [None, '']:
+        target_cols = [c.strip() for c in target_cols.split(',')]
+    else:
+        target_cols = [check_col]
+
     if same_file == 'yes':
         output_cols = df1.columns.tolist() + target_cols
     else:
@@ -285,13 +296,15 @@ if __name__ == '__main__':
 
     # print(results.head())
     results = results[output_cols]
+#    print(results)
 
-    # print(results)
     # override and fill empty state data points
     # df1['ADM1_PT'] = df1['state'].apply(lambda x: state_codes[x] if x in state_codes else x)
 
     def similar(a, b):
         return SequenceMatcher(None, a, b).ratio()
+
+    # print(results.head())
 
     mismatches = []
     if check_col not in [None, '']:
@@ -299,6 +312,7 @@ if __name__ == '__main__':
             # print(results[last_level])
             orig_name = results.loc[id2, last_level]
             new_name = results.loc[id2, check_col]
+            # print(orig_name)
             # print(orig_name, ' >>> ', new_name, ':', str(similar(orig_name, new_name)))
             if len(str(new_name)) <= 4:
                 threshold = 0.65
@@ -314,6 +328,9 @@ if __name__ == '__main__':
               'These entries may need to have their coordinates assigned manually, or their names may need to be fixed.\n')
         for entry in mismatches:
             print('\t' + entry)
+
+    results = results.drop(columns=[check_col])
+
 
     # output updated dataframe
     if output_coordinates != 'yes':
