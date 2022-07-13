@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # input_folder = path + 'data/'
     # rename_file = input_folder + 'rename_columns.xlsx'
     # correction_file = input_folder + 'fix_values.xlsx'
-    # cache_file = ''#input_folder + 'cache.tsv'
+    # cache_file = input_folder + 'cache.tsv'
     # output = input_folder + today + '_combined_data.tsv'
 
 
@@ -119,134 +119,46 @@ if __name__ == '__main__':
         id = hashlib.sha1(str(column_id).encode('utf-8')).hexdigest()
         return id
 
-
     # Fix datatables
     print('\nFixing datatables...')
     def fix_datatable(dfL, file):
         dfN = dfL
-        # if lab == 'DASA':
+        # print(dfL.columns.tolist())
+        # print(''.join(dfL.columns.tolist()))
+        if 'H1N1' in ''.join(dfL.columns.tolist()) or 'Influenza' in ''.join(dfL.columns.tolist()):
+            # print('\t\tFile = ' + file)
+            # print('\t\tCorrect format. Proceeding...')
+            dfL.insert(1, 'sample_id', '')
 
-        if 'codigo' in dfL.columns.tolist():
-            id_columns = ['codigorequisicao', 'idade', 'sexo', 'data_exame', 'cidade', 'uf']
-            for column in id_columns:
+            id_columns = ['Pedido', 'Idade', 'Sexo', 'Data Coleta', 'Cidade', 'UF']
+            test_columns = []
+            if 'Parainfluenza' in ''.join(dfL.columns.tolist()):
+                test_columns = ['VIRUS_Influenza A', 'VIRUS_Influenza H1N1', 'VIRUS_Influenza H3', 'VIRUS_Influenza B',
+                                'VIRUS_Metapneumovírus', 'VIRUS_Sincicial A', 'VIRUS_Sincicial B', 'VIRUS_Rinovírus',
+                                'VIRUS_Parainfluenza 1', 'VIRUS_Parainfluenza 2', 'VIRUS_Parainfluenza 3', 'VIRUS_Parainfluenza 4',
+                                'VIRUS_Adenovirus', 'VIRUS_Bocavirus', 'VIRUS_CoV-229E', 'VIRUS_CoV-HKU', 'VIRUS_CoV-NL63',
+                                'VIRUS_CoV-OC43', 'VIRUS_SARS_Like', 'VIRUS_SARS-CoV-2', 'VIRUS_Enterovírus',
+                                'BACTE_Bordetella pertussis', 'BACTE_Bordetella parapertussis', 'BACTE_Mycoplasma pneumoniae']
+                dfL.insert(1, 'test_kit', 'HLAGyn24')
+            elif 'PH4' in ''.join(dfL.columns.tolist()):
+                test_columns = ['VIRUS_IA', 'VIRUS_H1N1', 'VIRUS_AH3', 'VIRUS_B', 'VIRUS_MH', 'VIRUS_SA', 'VIRUS_SB',
+                                'VIRUS_RH', 'VIRUS_PH', 'VIRUS_PH2', 'VIRUS_PH3', 'VIRUS_PH4', 'VIRUS_ADE', 'VIRUS_BOC',
+                                'VIRUS_229E', 'VIRUS_HKU', 'VIRUS_NL63', 'VIRUS_OC43', 'VIRUS_SARS', 'VIRUS_COV2',
+                                'VIRUS_EV', 'BACTE_BP', 'BACTE_BPAR', 'BACTE_MP']
+                dfL.insert(1, 'test_kit', 'HLAGyn24')
+            elif 'SARS-CoV-2' in ''.join(dfL.columns.tolist()):
+                test_columns = ['Vírus Influenza A', 'Vírus Influenza B', 'Vírus Sincicial Respiratório A/B', 'Coronavírus SARS-CoV-2']
+                dfL.insert(1, 'test_kit', 'HLAGyn4')
+            else:
+                print('WARNING! Unknown file format. Check for inconsistencies.')
+
+
+            for column in id_columns + test_columns:
                 if column not in dfL.columns.tolist():
                     dfL[column] = ''
                     print('\t\t\t - No \'%s\' column found. Please check for inconsistencies. Meanwhile, an empty \'%s\' column was added.' % (column, column))
 
             # generate sample id
-            dfL.insert(1, 'sample_id', '')
-            dfL.insert(1, 'test_kit', 'DASA4')
-            dfL.fillna('', inplace=True)
-            dfL['unique_id'] = dfL[id_columns].astype(str).sum(axis=1) # combine values in rows as a long string
-            dfL['sample_id'] = dfL['unique_id'].apply(lambda x: generate_id(x)) # generate alphanumeric sample id
-
-            # prevent reprocessing of previously processed samples
-            if cache_file not in [np.nan, '', None]:
-                duplicates = dfL[dfL['sample_id'].isin(dfT['sample_id'].tolist())]['sample_id'].tolist()
-                if len(duplicates) > 0:
-                    print('\t\t * A total of ' + str(len(duplicates)) + ' samples were already processed previously. Skipping...')
-                dfL = dfL[~dfL['sample_id'].isin(dfT['sample_id'].tolist())] # remove duplicates
-
-            pathogens = {'FLUA': ['FLUA'], 'FLUB': ['FLUB'], 'VSR': ['VSR'], 'SC2': ['COVID'],
-                         'META': [], 'RINO': [], 'PARA': [], 'ADENO': [], 'BOCA': [], 'COVS': [], 'ENTERO': [], 'BAC': []}
-            dfN = pd.DataFrame()
-            unique_cols = list(set(dfL.columns.tolist()))
-
-            for i, (code, dfR) in enumerate(dfL.groupby('codigorequisicao')):
-                data = {} # one data row for each request
-                for col in unique_cols:
-                    data[col] = dfR[col].tolist()[0]
-
-                target_pathogen = {}
-                for p, t in pathogens.items():
-                    data[p + '_test_result'] = 'Not tested'
-                    for g in t:
-                        target_pathogen[g] = p
-                dfR['pathogen'] = dfR['codigo'].apply(lambda x: target_pathogen[x])
-
-                genes = {'FLUA': 1, 'FLUB': 1, 'VSR': 1, 'COVID': 1}
-                found = []
-
-                for virus, dfG in dfR.groupby('pathogen'):
-                    # print('>>> Test for', virus)
-                    for idx, row in dfG.iterrows():
-                        gene = dfG.loc[idx, 'codigo']
-                        ct_value = int(dfG.loc[idx, 'positivo'])
-                        result = '' # to be determined
-                        if gene in genes:
-                            found.append(gene)
-                            if gene not in data:
-                                data[gene] = '' # assign target
-                                if ct_value != '':
-                                    data[gene] = str(ct_value)
-                                    # print(gene, ct_value)
-
-                                    if ct_value == genes[gene]:
-                                        result = 'DETECTADO'
-                                        data[virus + '_test_result'] = result
-                                    else: # target not detected
-                                        # print('Ct too high for gene', gene)
-                                        result = 'NÃO DETECTADO'
-                                        data[virus + '_test_result'] = result
-                                    # print('\t * ' + gene + ' (' + str(ct_value) + ') = ' + data[virus + '_test_result'])
-
-                                else: # if no Ct is reported
-                                    result = 'NÃO DETECTADO'
-                                    # print('\t - ' + gene + ' (' + str(ct_value) + ') = ' + data[virus + '_test_result'])
-                                    if data[virus + '_test_result'] != 'DETECTADO':
-                                        data[virus + '_test_result'] = result
-                        else:
-                            found.append(gene)
-
-                    # check if gene was detected
-                    for g in genes.keys():
-                        if g in found:
-                            found.remove(g)
-                    if len(found) > 0:
-                        for g in found:
-                            if g not in genes:
-                                print('Gene ' + g + ' in an anomaly. Check for inconsistencies')
-
-                # adding missing columns
-                dfL['Ct_ORF1ab'] = ''
-
-                # print(data)
-                dfN = dfN.append(data, ignore_index=True)
-
-        # elif lab == 'DASA_2':
-        elif 'Gene S' in dfL.columns.tolist():
-
-            if 'resultado' not in dfL.columns.tolist():
-                if 'resultado_norm' in dfL.columns.tolist():
-                    dfL.rename(columns={'resultado_norm': 'resultado'}, inplace=True)
-                    dfL['resultado'] = dfL['resultado'].apply(
-                        lambda x: 'NAO DETECTADO' if x == 'NEGATIVO' else 'DETECTADO')
-                else:
-                    if 'resultado_original' in dfL.columns.tolist():
-                        dfL.rename(columns={'resultado_original': 'resultado'}, inplace=True)
-                        dfL['resultado'] = dfL['resultado'].apply(
-                            lambda x: 'NAO DETECTADO' if x == 'NDT' else 'DETECTADO')
-                    else:
-                        print('No \'result\' column found.')
-                        exit()
-
-            if 'requisicao' not in dfL.columns.tolist():
-                if 'codigo_externo_do_paciente' in dfL.columns.tolist():
-                    dfL.rename(columns={'codigo_externo_do_paciente': 'requisicao'}, inplace=True)
-                else:
-                    dfL.insert(1, 'requisicao', '')
-                    print('\t\t\t - No \'requisicao\' column found. Please check for inconsistencies. Meanwhile, an empty \'requisicao\' column was added.')
-
-            # print(dfL.columns.tolist())
-            id_columns = ['requisicao', 'data', 'idade', 'sexo', 'cidade_norm', 'uf_norm', 'Gene N', 'Gene ORF', 'Gene S']
-            for column in id_columns:
-                if column not in dfL.columns.tolist():
-                    dfL[column] = ''
-                    print('\t\t\t - No \'%s\' column found. Please check for inconsistencies. Meanwhile, an empty \'%s\' column was added.' % (column, column))
-
-            # generate sample id
-            dfL.insert(1, 'sample_id', '')
-            dfL.insert(1, 'test_kit', 'DASAsgtf')
             dfL.fillna('', inplace=True)
             dfL['unique_id'] = dfL[id_columns].astype(str).sum(axis=1) # combine values in rows as a long string
             dfL['sample_id'] = dfL['unique_id'].apply(lambda x: generate_id(x)) # generate alphanumeric sample id
@@ -259,32 +171,113 @@ if __name__ == '__main__':
                 dfL = dfL[~dfL['sample_id'].isin(dfT['sample_id'].tolist())] # remove duplicates
 
             # starting reformatting process
-            def not_assigned(geo_data):
-                empty = ['', 'SEM CIDADE', 'MUDOU', 'NAO_INFORMADO', 'NAOINFORMADO']
-                if geo_data in empty:
-                    geo_data = ''
-                return geo_data
+            pathogens = {'FLUA': ['VIRUS_Influenza A', 'VIRUS_Influenza H1N1', 'VIRUS_Influenza H3', 'Vírus Influenza A', 'VIRUS_IA', 'VIRUS_H1N1', 'VIRUS_AH3'],
+                         'FLUB': ['VIRUS_Influenza B', 'Vírus Influenza B', 'VIRUS_B'], 'META': ['VIRUS_Metapneumovírus', 'VIRUS_MH'],
+                         'VSR': ['VIRUS_Sincicial A', 'VIRUS_Sincicial B', 'Vírus Sincicial Respiratório A/B', 'VIRUS_SA', 'VIRUS_SB'],
+                         'RINO': ['VIRUS_Rinovírus', 'VIRUS_RH'],
+                         'PARA': ['VIRUS_Parainfluenza 1', 'VIRUS_Parainfluenza 2','VIRUS_Parainfluenza 3', 'VIRUS_Parainfluenza 4', 'VIRUS_PH', 'VIRUS_PH2', 'VIRUS_PH3', 'VIRUS_PH4'],
+                         'ADENO': ['VIRUS_Adenovirus', 'VIRUS_ADE'], 'BOCA': ['VIRUS_Bocavirus', 'VIRUS_BOC'],
+                         'COVS': ['VIRUS_CoV-229E', 'VIRUS_CoV-HKU', 'VIRUS_CoV-NL63', 'VIRUS_CoV-OC43', 'VIRUS_229E', 'VIRUS_HKU', 'VIRUS_NL63', 'VIRUS_OC43'],
+                         'SC2': ['VIRUS_SARS_Like', 'VIRUS_SARS-CoV-2', 'Coronavírus SARS-CoV-2', 'VIRUS_SARS', 'VIRUS_COV2'],
+                         'ENTERO': ['VIRUS_Enterovírus', 'VIRUS_EV'],
+                         'BAC': ['BACTE_Bordetella pertussis', 'BACTE_Bordetella parapertussis', 'BACTE_Mycoplasma pneumoniae', 'BACTE_BP', 'BACTE_BPAR', 'BACTE_MP']}
 
+            # adding missing columns
+            if 'Dt. Nascimento' not in dfL.columns.tolist():
+                dfL['birthdate'] = ''
+            dfL['Ct_FluA'] = ''
+            dfL['Ct_FluB'] = ''
+            dfL['Ct_VSR'] = ''
+            dfL['Ct_RDRP'] = ''
+            dfL['Ct_geneS'] = ''
+            dfL['Ct_ORF1ab'] = ''
+
+
+            dfN = pd.DataFrame()
+            unique_cols = list(set(dfL.columns.tolist()))
+            for idx, row in dfL.iterrows():
+                data = {} # one data row for each request
+                for col in unique_cols:
+                    value = dfL.loc[idx, col]
+                    # data[col] = dfL[col].tolist()[0]
+                    data[col] = value
+
+                for pat, tests in pathogens.items():
+                    # print('\n' + pat, tests)
+                    data[pat + '_test_result'] = 'Not tested'
+
+                    for target in tests:
+                        # print(file, target)
+                        if target in data.keys():
+                            pedido = data['Pedido']
+                            # print(pedido, target, data[target])
+                            if data[target] == 'Detectado':
+                                if data[pat + '_test_result'] in ['Not tested', 'Não Detectado']:
+                                    # print('\t\t\t >>>' + target, data[target], '*', data[pat + '_test_result'])
+                                    data[pat + '_test_result'] = 'Detectado'
+                                    # print(pedido + ': ' + pat + '_test_result', 'fixed >>>', data[pat + '_test_result'])
+                                # else:
+                                    # print(pat + '_test_result', 'fixed >>>', data[pat + '_test_result'])
+                            elif data[target] == 'Não Detectado':
+                                if data[pat + '_test_result'] == 'Not tested':
+                                    # print('\t\t\t >>>' + target, data[target], '*', data[pat + '_test_result'])
+                                    data[pat + '_test_result'] = 'Não Detectado'
+                                    # print(pat + '_test_result', 'fixed >>>', data[pat + '_test_result'])
+                            else:
+                                pass # if neither "Detectado" nor "Não Detectado", live it as is ("Not tested")
+
+                dfN = dfN.append(data, ignore_index=True)
+
+        elif 'CT_N' in dfL.columns.tolist():
+            # print('\t\tFile = ' + file)
+            # print('\t\tCorrect format. Proceeding...')
+
+            id_columns = ['Pedido', 'Idade', 'Sexo', 'Data Coleta', 'Cidade', 'UF', 'CT_I', 'CT_N', 'CT_ORF1AB']
+
+            for column in id_columns:
+                if column not in dfL.columns.tolist():
+                    dfL[column] = ''
+                    print('\t\t\t - No \'%s\' column found. Please check for inconsistencies. Meanwhile, an empty \'%s\' column was added.' % (column, column))
+
+            # generate sample id
+            dfL.insert(1, 'sample_id', '')
+            dfL.insert(1, 'test_kit', 'HLAGynCovid')
+            dfL.fillna('', inplace=True)
+            dfL['unique_id'] = dfL[id_columns].astype(str).sum(axis=1) # combine values in rows as a long string
+            dfL['sample_id'] = dfL['unique_id'].apply(lambda x: generate_id(x)) # generate alphanumeric sample id
+
+            # prevent reprocessing of previously processed samples
+            if cache_file not in [np.nan, '', None]:
+                duplicates = dfL[dfL['sample_id'].isin(dfT['sample_id'].tolist())]['sample_id'].tolist()
+                if len(duplicates) > 0:
+                    print('\t\t * A total of ' + str(len(duplicates)) + ' samples were already processed previously. Skipping...')
+                dfL = dfL[~dfL['sample_id'].isin(dfT['sample_id'].tolist())] # remove duplicates
+
+            # starting reformatting process
             pathogens = {'FLUA': [], 'FLUB': [], 'VSR': [], 'SC2': [], 'META': [], 'RINO': [],
                          'PARA': [], 'ADENO': [], 'BOCA': [], 'COVS': [], 'ENTERO': [], 'BAC': []}
 
-            # target_pathogen = {}
             for p, t in pathogens.items():
                 if p != 'SC2':
                     dfL[p + '_test_result'] = 'Not tested'
 
             # adding missing columns
-            dfL['birthdate'] = ''
+            if 'Dt. Nascimento' not in dfL.columns.tolist():
+                dfL['birthdate'] = ''
             dfL['Ct_FluA'] = ''
             dfL['Ct_FluB'] = ''
             dfL['Ct_VSR'] = ''
             dfL['Ct_RDRP'] = ''
+            dfL['Ct_geneS'] = ''
 
-            dfL['cidade_norm'] = dfL['cidade_norm'].apply(lambda x: not_assigned(x))
-            dfL['uf_norm'] = dfL['uf_norm'].apply(lambda x: not_assigned(x))
+            # fix decimal values
+            dfL['CT_N'] = dfL['CT_N'].str.replace(',', '.')
+            dfL['CT_ORF1AB'] = dfL['CT_ORF1AB'].str.replace(',', '.')
             dfN = dfL
+        else:
+            # print('\t\tFile = ' + file)
+            print('\t\tWARNING! Unknown file format. Check for inconsistencies.')
 
-        # print(dfN.head())
         return dfN
 
 
@@ -299,7 +292,7 @@ if __name__ == '__main__':
     # open data files
     for element in os.listdir(input_folder):
         if not element.startswith('_'):
-            if element == 'DASA': # check if folder is the correct one
+            if element == 'HLAGyn': # check if folder is the correct one
                 id = element
                 element = element + '/'
                 if os.path.isdir(input_folder + element) == True:
